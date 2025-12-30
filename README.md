@@ -44,6 +44,110 @@ Traffic never passes through the control plane.
 - Next.js
 - Tailwind CSS
 
+---
+
+## 2a. Project Status & Structure
+
+This repository contains a complete architecture and internal packages for a peer-to-peer mesh VPN, plus a Next.js dashboard. CLI entrypoints in `cmd/` are currently scaffolds; wiring them to internal services is part of the implementation plan documented below.
+
+- Control plane service logic: `internal/controlplane` (API handlers, storage, services)
+- Node runtime logic: `internal/node` (STUN, NAT hole punching, WireGuard userspace, TUN)
+- Shared utilities and models: `internal/shared`, `internal/controlplane/model`, `shared/proto`
+- Dashboard (Next.js): `web/`
+
+See `docs/` for detailed architecture, API specs, implementation plan, deployment, and troubleshooting.
+
+---
+
+## Table of Contents
+
+- Quickstart
+- Technology Stack
+- Architecture Overview
+- Control Plane API
+- Node Runtime Lifecycle
+- Implementation Plan (CLI + services)
+- Setup & Development
+- Deployment
+- Dashboard (Next.js)
+- Troubleshooting
+- Security Model
+- Roadmap
+
+---
+
+## Quickstart
+
+Until CLI entrypoints are wired, you can explore and run the dashboard:
+
+```bash
+cd web
+pnpm install    # or npm install / yarn
+pnpm dev        # starts Next.js dev server
+```
+
+Configure the dashboard to point at your control plane URL via environment variable:
+
+```bash
+export NEXT_PUBLIC_CONTROLPLANE_URL="http://localhost:8080"
+```
+
+The full server and node runtime wiring steps are described in `docs/IMPLEMENTATION_PLAN.md`.
+
+---
+
+## Control Plane Implementation
+
+Responsibilities and data model remain as described. API endpoints are documented in `docs/CONTROL_PLANE_API.md` with request/response payloads.
+
+---
+
+## Node Runtime Lifecycle
+
+Detailed runtime flow, STUN discovery, UDP hole punching, WireGuard userspace setup, and TUN handling are covered in `docs/NODE_RUNTIME.md`.
+
+---
+
+## Implementation Plan (CLI + services)
+
+Step-by-step tasks to wire `cmd/controlplane` and `cmd/node` to internal packages, define flags/config, initialize services, and start servers are provided in `docs/IMPLEMENTATION_PLAN.md`.
+
+---
+
+## Setup & Development
+
+See `docs/SETUP.md` for prerequisites (Linux, Go, Node.js), development environment, and useful commands.
+
+---
+
+## Deployment
+
+Refer to `docs/DEPLOYMENT.md` for Docker/Docker Compose examples, production notes, and operational runbook.
+
+---
+
+## Dashboard (Next.js)
+
+The dashboard features and commands are covered in `docs/DASHBOARD.md`.
+
+---
+
+## Troubleshooting
+
+Common issues (NAT types, firewall, TUN permissions, STUN reachability, WireGuard handshake) are documented in `docs/TROUBLESHOOTING.md`.
+
+---
+
+## Security Model
+
+Summary remains as in section 11; in-depth notes and threat model are expanded in `docs/SECURITY.md`.
+
+---
+
+## Roadmap
+
+Future improvements (relay fallback, IPv6, key rotation, ACLs, mobile) are restated in `docs/IMPLEMENTATION_PLAN.md` with suggested milestones.
+
 ### Deployment
 - Docker
 - Docker Compose
