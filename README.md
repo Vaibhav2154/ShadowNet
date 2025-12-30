@@ -41,8 +41,7 @@ Traffic never passes through the control plane.
 - Linux TUN interface
 
 ### Frontend
-- React
-- Vite
+- Next.js
 - Tailwind CSS
 
 ### Deployment
