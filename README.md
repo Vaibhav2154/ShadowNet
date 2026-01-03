@@ -11,6 +11,31 @@ The control plane is responsible only for coordination and discovery, while **al
 
 ---
 
+
+## Why ShadowNet?
+
+Traditional VPNs route all your traffic through a central server, which becomes a bottleneck and a privacy risk. ShadowNet is different.
+
+### Key Features
+
+- **True P2P**: Traffic flows directly between peers. The control plane only helps them find each other.
+- **NAT Traversal**: Uses advanced hole-punching to connect peers even behind residential routers and strict firewalls.
+- **Secure**: Built on WireGuard®. Fast, modern, and cryptographically secure.
+- **Simple**: Userspace implementation means no kernel modules or complex setup. Just run the binary.
+
+### Conceptual Overview
+
+Think of ShadowNet like a **Phone System**:
+
+*   **Control Plane (The Phone Book)**: It knows everyone's phone number (IP address) and keeps it updated. When you want to call "Bob", you look up his number here. It *never* listens to your call.
+*   **Data Plane (The Direct Call)**: Once you have the number, you call Bob directly. The conversation (data) goes strictly between you and Bob, encrypted and private.
+
+### Common Use Cases
+
+1.  **Multi-Cloud Networking**: Connect your AWS database to your Google Cloud backend as if they were on the same LAN.
+2.  **Secure Remote Access**: Access your home Raspberry Pi or office workstation from a coffee shop without exposing ports to the public internet.
+3.  **Developer Mesh**: Allow team members to connect to each other's local dev environments securely.
+
 ## 2. Architecture Overview
 
 ### 2.1 High-Level Architecture
@@ -63,6 +88,7 @@ See `docs/` for detailed architecture, API specs, implementation plan, deploymen
 
 - Quickstart
 - Technology Stack
+- Concepts & Flow
 - Architecture Overview
 - Control Plane API
 - Node Runtime Lifecycle
@@ -93,6 +119,7 @@ export NEXT_PUBLIC_CONTROLPLANE_URL="http://localhost:8080"
 ```
 
 The full server and node runtime wiring steps are described in `docs/IMPLEMENTATION_PLAN.md`.
+For foundational understanding, see `docs/CONCEPTS_AND_FLOW.md`.
 
 ---
 
