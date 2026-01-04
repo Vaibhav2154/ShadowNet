@@ -1,0 +1,60 @@
+# Production docker-compose (Control Plane + Dashboard only)
+# Use this for deploying to a VPS/server
+# Nodes should run on separate machines
+
+version: '3.8'
+
+services:
+  # Control Plane - Coordination server
+  controlplane:
+    build:
+      context: .
+      dockerfile: Dockerfile.controlplane
+    container_name: shadownet-controlplane
+    ports:
+      - "8080:8080"
+    volumes:
+      - controlplane-data:/data
+    environment:
+      - LISTEN_ADDR=:8080
+      - DB_PATH=/data/controlplane.db
+      - ACTIVE_TIMEOUT=5m
+    restart: unless-stopped
+    networks:
+      - shadownet
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Dashboard - Web UI
+  dashboard:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: shadownet-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      # Change this to your server's public IP or domain
+      - NEXT_PUBLIC_CONTROLPLANE_URL=http://localhost:8080
+    depends_on:
+      controlplane:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - shadownet
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  shadownet:
+    driver: bridge
+
+volumes:
+  controlplane-data:
+    driver: local

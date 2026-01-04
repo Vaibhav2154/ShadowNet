@@ -1,0 +1,124 @@
+services:
+  # Control Plane - Coordination server
+  controlplane:
+    build:
+      context: .
+      dockerfile: Dockerfile.controlplane
+    container_name: shadownet-controlplane
+    ports:
+      - "8080:8080"
+    volumes:
+      - controlplane-data:/data
+    environment:
+      - LISTEN_ADDR=:8080
+      - DB_PATH=/data/controlplane.db
+      - ACTIVE_TIMEOUT=5m
+    restart: unless-stopped
+    networks:
+      shadownet:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Dashboard - Web UI
+  dashboard:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: shadownet-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_CONTROLPLANE_URL=http://localhost:8080
+    depends_on:
+      controlplane:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - shadownet
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # Node 1 - First VPN node
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: shadownet-node-1
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - PEER_ID=docker-node-1
+      - CONTROLPLANE_URL=http://controlplane:8080
+      - USE_DOCKER_IP=true
+    depends_on:
+      controlplane:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      shadownet:
+        ipv4_address: 172.20.0.21
+
+  # Node 2 - Second VPN node
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: shadownet-node-2
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - PEER_ID=docker-node-2
+      - CONTROLPLANE_URL=http://controlplane:8080
+      - USE_DOCKER_IP=true
+    depends_on:
+      controlplane:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      shadownet:
+        ipv4_address: 172.20.0.22
+
+  # Node 3 - Third VPN node
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: shadownet-node-3
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    environment:
+      - PEER_ID=docker-node-3
+      - CONTROLPLANE_URL=http://controlplane:8080
+      - USE_DOCKER_IP=true
+    depends_on:
+      controlplane:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      shadownet:
+        ipv4_address: 172.20.0.23
+
+networks:
+  shadownet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  controlplane-data:
+    driver: local
+  

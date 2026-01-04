@@ -1,0 +1,49 @@
+# Build stage
+FROM golang:1.25.5-alpine AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev sqlite-dev linux-headers
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build binary with optimizations
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o node ./cmd/node
+
+# Runtime stage
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    iptables \
+    iproute2 \
+    wireguard-tools
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/node .
+
+# Create config directory
+RUN mkdir -p /etc/shadownet
+
+# Expose WireGuard port
+EXPOSE 51820/udp
+
+# Set default environment variables
+ENV PEER_ID=docker-node
+ENV CONTROLPLANE_URL=http://controlplane:8080
+
+# Run node (requires NET_ADMIN capability)
+CMD ./node \
+     --id ${PEER_ID} \
+     --controlplane-url ${CONTROLPLANE_URL} \
+     --private-key-path /etc/shadownet/node.key \
+     --listen-port 51820
