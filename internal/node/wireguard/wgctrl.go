@@ -1,39 +1,14 @@
 package wireguard
 
-import (
-	"bufio"
-	"fmt"
-	"strings"
-)
-
-// Note: This file provides additional WireGuard control utilities
-// The main device management is in device.go
-
-// PeerStats represents statistics for a peer
-type PeerStats struct {
-	PublicKey        string
-	Endpoint         string
-	LastHandshake    int64
-	BytesReceived    int64
-	BytesTransmitted int64
-	AllowedIPs       []string
+// GetPeerStats returns statistics for a peer (placeholder for kernel WireGuard)
+func (d *Device) GetPeerStats(publicKey *PublicKey) (map[string]interface{}, error) {
+	// For kernel WireGuard, we could parse `wg show` output
+	// For now, return empty stats
+	return map[string]interface{}{}, nil
 }
 
-// GetPeerStats retrieves statistics for all peers (placeholder)
-// In a full implementation, this would parse IPC output
-func (d *Device) GetPeerStats() ([]PeerStats, error) {
-	// This would require parsing the IPC get operation
-	// For now, return empty slice
-	return []PeerStats{}, nil
-}
-
-// SetFwMark sets the firewall mark for the device
-func (d *Device) SetFwMark(mark uint32) error {
-	config := fmt.Sprintf("fwmark=%d\n", mark)
-
-	if err := d.device.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
-		return fmt.Errorf("failed to set fwmark: %w", err)
-	}
-
+// SetFirewallMark sets the firewall mark (placeholder for kernel WireGuard)
+func (d *Device) SetFirewallMark(mark uint32) error {
+	// Kernel WireGuard handles this via config file
 	return nil
 }

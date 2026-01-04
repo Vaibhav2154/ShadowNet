@@ -27,12 +27,12 @@ func GeneratePrivateKey() (*PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate random key: %w", err)
 	}
-	
+
 	// Clamp the key as per Curve25519 spec
 	key[0] &= 248
 	key[31] &= 127
 	key[31] |= 64
-	
+
 	return &key, nil
 }
 
@@ -48,9 +48,19 @@ func (k *PrivateKey) String() string {
 	return base64.StdEncoding.EncodeToString(k[:])
 }
 
+// HexString returns the hex-encoded private key (for WireGuard IPC)
+func (k *PrivateKey) HexString() string {
+	return fmt.Sprintf("%x", k[:])
+}
+
 // String returns the base64-encoded public key
 func (k *PublicKey) String() string {
 	return base64.StdEncoding.EncodeToString(k[:])
+}
+
+// HexString returns the hex-encoded public key (for WireGuard IPC)
+func (k *PublicKey) HexString() string {
+	return fmt.Sprintf("%x", k[:])
 }
 
 // ParsePrivateKey parses a base64-encoded private key
@@ -59,11 +69,11 @@ func ParsePrivateKey(encoded string) (*PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode key: %w", err)
 	}
-	
+
 	if len(decoded) != KeyLength {
 		return nil, fmt.Errorf("invalid key length: expected %d, got %d", KeyLength, len(decoded))
 	}
-	
+
 	var key PrivateKey
 	copy(key[:], decoded)
 	return &key, nil
@@ -75,11 +85,11 @@ func ParsePublicKey(encoded string) (*PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode key: %w", err)
 	}
-	
+
 	if len(decoded) != KeyLength {
 		return nil, fmt.Errorf("invalid key length: expected %d, got %d", KeyLength, len(decoded))
 	}
-	
+
 	var key PublicKey
 	copy(key[:], decoded)
 	return &key, nil
@@ -93,12 +103,12 @@ func (k *PrivateKey) SaveToFile(path string) error {
 		return fmt.Errorf("failed to create key file: %w", err)
 	}
 	defer f.Close()
-	
+
 	_, err = f.WriteString(k.String())
 	if err != nil {
 		return fmt.Errorf("failed to write key: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -108,7 +118,7 @@ func LoadPrivateKeyFromFile(path string) (*PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read key file: %w", err)
 	}
-	
+
 	return ParsePrivateKey(string(data))
 }
 
@@ -119,20 +129,20 @@ func LoadOrGeneratePrivateKey(path string) (*PrivateKey, error) {
 	if err == nil {
 		return key, nil
 	}
-	
-	// Generate new key if file doesn't exist
-	if os.IsNotExist(err) {
+
+	// Check if file doesn't exist (unwrap the error)
+	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
 		key, err := GeneratePrivateKey()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate key: %w", err)
 		}
-		
+
 		if err := key.SaveToFile(path); err != nil {
 			return nil, fmt.Errorf("failed to save key: %w", err)
 		}
-		
+
 		return key, nil
 	}
-	
+
 	return nil, err
 }

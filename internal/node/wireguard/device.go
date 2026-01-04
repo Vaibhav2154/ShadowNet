@@ -1,91 +1,86 @@
 package wireguard
 
 import (
-	"bufio"
 	"fmt"
-	"log"
+	"os"
+	"os/exec"
 	"strings"
-
-	"golang.zx2c4.com/wireguard/conn"
-	"golang.zx2c4.com/wireguard/device"
-	"golang.zx2c4.com/wireguard/tun"
 )
 
-// Device represents a WireGuard device
+// Device represents a WireGuard device using kernel module
 type Device struct {
-	device     *device.Device
-	tunDevice  tun.Device
-	listenPort int
+	interfaceName string
+	configPath    string
 }
 
-// NewDevice creates a new WireGuard device
-func NewDevice(tunDevice tun.Device, privateKey *PrivateKey, listenPort int) (*Device, error) {
-	// Create logger
-	logger := device.NewLogger(
-		device.LogLevelError,
-		fmt.Sprintf("(%s) ", "wireguard"),
-	)
+// NewDevice creates a new WireGuard device using kernel module
+func NewDevice(interfaceName string, privateKey *PrivateKey, virtualIP string, listenPort int) (*Device, error) {
+	// Create WireGuard config file
+	configPath := fmt.Sprintf("/etc/wireguard/%s.conf", interfaceName)
 
-	// Create WireGuard device
-	wgDevice := device.NewDevice(tunDevice, conn.NewDefaultBind(), logger)
+	config := fmt.Sprintf(`[Interface]
+PrivateKey = %s
+Address = %s/24
+ListenPort = %d
+`, privateKey.String(), virtualIP, listenPort)
 
-	// Configure device
-	config := fmt.Sprintf("private_key=%s\nlisten_port=%d\n",
-		privateKey.String(),
-		listenPort,
-	)
-
-	if err := wgDevice.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
-		return nil, fmt.Errorf("failed to configure device: %w", err)
+	// Write config file
+	if err := os.MkdirAll("/etc/wireguard", 0700); err != nil {
+		return nil, fmt.Errorf("failed to create wireguard directory: %w", err)
 	}
 
-	// Bring device up
-	wgDevice.Up()
+	if err := os.WriteFile(configPath, []byte(config), 0600); err != nil {
+		return nil, fmt.Errorf("failed to write config: %w", err)
+	}
 
-	log.Printf("WireGuard device created on port %d", listenPort)
+	// Bring up interface using wg-quick
+	cmd := exec.Command("wg-quick", "up", interfaceName)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("failed to bring up interface: %w (output: %s)", err, string(output))
+	}
 
 	return &Device{
-		device:     wgDevice,
-		tunDevice:  tunDevice,
-		listenPort: listenPort,
+		interfaceName: interfaceName,
+		configPath:    configPath,
 	}, nil
 }
 
 // AddPeer adds a peer to the WireGuard device
 func (d *Device) AddPeer(publicKey *PublicKey, endpoint string, allowedIPs []string) error {
-	// Build peer configuration
-	config := fmt.Sprintf("public_key=%s\n", publicKey.String())
+	// Build wg command to add peer
+	args := []string{
+		"set", d.interfaceName,
+		"peer", publicKey.String(),
+	}
 
 	if endpoint != "" {
-		config += fmt.Sprintf("endpoint=%s\n", endpoint)
+		args = append(args, "endpoint", endpoint)
 	}
 
-	// Add allowed IPs
-	for _, ip := range allowedIPs {
-		config += fmt.Sprintf("allowed_ip=%s\n", ip)
+	if len(allowedIPs) > 0 {
+		args = append(args, "allowed-ips", strings.Join(allowedIPs, ","))
 	}
 
-	// Enable persistent keepalive (25 seconds)
-	config += "persistent_keepalive_interval=25\n"
+	// Add persistent keepalive
+	args = append(args, "persistent-keepalive", "25")
 
-	// Apply configuration
-	if err := d.device.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
-		return fmt.Errorf("failed to add peer: %w", err)
+	cmd := exec.Command("wg", args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to add peer: %w (output: %s)", err, string(output))
 	}
 
-	log.Printf("Added peer with public key %s...", publicKey.String()[:16])
 	return nil
 }
 
 // UpdatePeerEndpoint updates a peer's endpoint
 func (d *Device) UpdatePeerEndpoint(publicKey *PublicKey, endpoint string) error {
-	config := fmt.Sprintf("public_key=%s\nendpoint=%s\n",
-		publicKey.String(),
-		endpoint,
+	cmd := exec.Command("wg", "set", d.interfaceName,
+		"peer", publicKey.String(),
+		"endpoint", endpoint,
 	)
 
-	if err := d.device.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
-		return fmt.Errorf("failed to update peer endpoint: %w", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to update endpoint: %w (output: %s)", err, string(output))
 	}
 
 	return nil
@@ -93,10 +88,13 @@ func (d *Device) UpdatePeerEndpoint(publicKey *PublicKey, endpoint string) error
 
 // RemovePeer removes a peer from the WireGuard device
 func (d *Device) RemovePeer(publicKey *PublicKey) error {
-	config := fmt.Sprintf("public_key=%s\nremove=true\n", publicKey.String())
+	cmd := exec.Command("wg", "set", d.interfaceName,
+		"peer", publicKey.String(),
+		"remove",
+	)
 
-	if err := d.device.IpcSetOperation(bufio.NewReader(strings.NewReader(config))); err != nil {
-		return fmt.Errorf("failed to remove peer: %w", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to remove peer: %w (output: %s)", err, string(output))
 	}
 
 	return nil
@@ -104,11 +102,21 @@ func (d *Device) RemovePeer(publicKey *PublicKey) error {
 
 // Close closes the WireGuard device
 func (d *Device) Close() error {
-	d.device.Close()
+	// Bring down interface
+	cmd := exec.Command("wg-quick", "down", d.interfaceName)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to bring down interface: %w (output: %s)", err, string(output))
+	}
+
+	// Remove config file
+	if err := os.Remove(d.configPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove config: %w", err)
+	}
+
 	return nil
 }
 
-// Wait waits for the device to close
+// Wait is a no-op for kernel WireGuard
 func (d *Device) Wait() {
-	d.device.Wait()
+	// Kernel WireGuard doesn't need to wait
 }
