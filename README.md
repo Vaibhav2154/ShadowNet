@@ -20,7 +20,7 @@ It is designed as an **educational reference implementation**, demonstrating adv
 
 ### 🚀 Key Features
 
-*   **真正的 P2P (True P2P)**: Traffic flows directly between peers (A ↔ B) without touching the control plane.
+*   **Nesg P2P (True P2P)**: Traffic flows directly between peers (A ↔ B) without touching the control plane.
 *   **NAT Traversal**: Advanced UDP hole-punching technology connects peers behind residential routers, CGNAT, and strict firewalls.
 *   **Userspace WireGuard**: Portable, kernel-independent implementation using `wireguard-go`.
 *   **Zero Trust Architecture**: Identity is cryptographic (Public Key). IP addresses are just transport details.
