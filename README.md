@@ -84,29 +84,53 @@ graph TD
 *   **Go** 1.21+
 *   **Node.js** 18+ (for dashboard)
 
-### 1. Run the Dashboard
-The easiest way to explore ShadowNet is via the web dashboard.
+### 1. 🐳 Docker Quickstart (Recommended)
+The fastest way to spin up the entire stack (Control Plane + Dashboard + 3 Nodes):
 
+```bash
+# Start everything in detached mode
+docker-compose up -d
+
+# View the Dashboard
+xdg-open http://localhost:3000
+```
+
+This spins up:
+*   **Control Plane** on port `8080`
+*   **Dashboard** on port `3000`
+*   **3 Demo Nodes** that automatically interconnect
+
+### 2. Manual Quickstart (Development)
+
+#### Prerequisites
+*   **Linux** (Kernel 5.4+)
+*   **Go** 1.21+
+*   **Node.js** 18+
+
+#### Run the Dashboard
 ```bash
 cd web
 npm install
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to see the mesh visualization and documentation.
+Open [http://localhost:3000](http://localhost:3000)
 
-### 2. Run the Control Plane (Server)
-*(CLI Integration in progress - see Implementation Plan)*
-
+#### Run the Control Plane
 ```bash
-# Start the signaling server
 go run cmd/controlplane/main.go
+# Server listens on :8080 by default
 ```
 
-### 3. Run a Node (Client)
+#### Run a Node (Client)
+Use `sudo` (required for TUN device creation) and specify the control plane URL.
+
 ```bash
 # Join the mesh
-sudo go run cmd/node/main.go --control-plane=http://localhost:8080
+sudo go run cmd/node/main.go \
+  -id=my-node-1 \
+  -controlplane-url=http://localhost:8080
 ```
+*(Note: `sudo` is required because the node creates a userspace `tun0` interface network device)*
 
 ---
 
