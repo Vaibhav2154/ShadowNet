@@ -1,390 +1,141 @@
-## ShadowNet — A Peer-to-Peer Mesh VPN using WireGuard
+# ShadowNet 🌐
+
+**The educational, production-grade Peer-to-Peer Mesh VPN.**
+
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![WireGuard](https://img.shields.io/badge/WireGuard-Fast-red?style=flat&logo=wireguard)](https://www.wireguard.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active_Development-green)]()
+
+<!-- ![ShadowNet Dashboard](docs/images/dashboard-preview.png) -->
 
 ---
 
-## 1. Introduction
+## ⚡ Introduction
 
-ShadowNet is a production-grade **peer-to-peer (P2P) mesh VPN** built using **userspace WireGuard**, **UDP hole punching**, and a **centralized control plane** for peer coordination.  
-The system is designed with strict **control-plane / data-plane separation**, ensuring privacy, scalability, and performance.
+**ShadowNet** is a decentralized, peer-to-peer (P2P) mesh VPN that creates a secure private network over the public internet. Unlike traditional hub-and-spoke VPNs, ShadowNet allows nodes to communicate **directly** with each other, minimizing latency and eliminating central bottlenecks.
 
-The control plane is responsible only for coordination and discovery, while **all encrypted traffic flows directly between peers**.
+It is designed as an **educational reference implementation**, demonstrating advanced concepts like UDP Hole Punching, STUN, userspace packet processing, and the Noise Protocol Framework.
 
----
+### 🚀 Key Features
 
-
-## Why ShadowNet?
-
-Traditional VPNs route all your traffic through a central server, which becomes a bottleneck and a privacy risk. ShadowNet is different.
-
-### Key Features
-
-- **True P2P**: Traffic flows directly between peers. The control plane only helps them find each other.
-- **NAT Traversal**: Uses advanced hole-punching to connect peers even behind residential routers and strict firewalls.
-- **Secure**: Built on WireGuard®. Fast, modern, and cryptographically secure.
-- **Simple**: Userspace implementation means no kernel modules or complex setup. Just run the binary.
-
-### Conceptual Overview
-
-Think of ShadowNet like a **Phone System**:
-
-*   **Control Plane (The Phone Book)**: It knows everyone's phone number (IP address) and keeps it updated. When you want to call "Bob", you look up his number here. It *never* listens to your call.
-*   **Data Plane (The Direct Call)**: Once you have the number, you call Bob directly. The conversation (data) goes strictly between you and Bob, encrypted and private.
-
-### Common Use Cases
-
-1.  **Multi-Cloud Networking**: Connect your AWS database to your Google Cloud backend as if they were on the same LAN.
-2.  **Secure Remote Access**: Access your home Raspberry Pi or office workstation from a coffee shop without exposing ports to the public internet.
-3.  **Developer Mesh**: Allow team members to connect to each other's local dev environments securely.
-
-## 2. Architecture Overview
-
-### 2.1 High-Level Architecture
-
-Control Plane:
-- Peer registration
-- Public key exchange
-- Endpoint discovery
-- Health tracking
-
-Data Plane:
-- Userspace WireGuard tunnel
-- UDP NAT traversal
-- Encrypted peer-to-peer packet routing
-
-Traffic never passes through the control plane.
+*   **真正的 P2P (True P2P)**: Traffic flows directly between peers (A ↔ B) without touching the control plane.
+*   **NAT Traversal**: Advanced UDP hole-punching technology connects peers behind residential routers, CGNAT, and strict firewalls.
+*   **Userspace WireGuard**: Portable, kernel-independent implementation using `wireguard-go`.
+*   **Zero Trust Architecture**: Identity is cryptographic (Public Key). IP addresses are just transport details.
+*   **Split-Brain Architecture**: Strict separation of the **Control Plane** (Signaling) and **Data Plane** (Media).
+*   **Modern Dashboard**: A real-time visualization of your mesh network.
 
 ---
 
-## 3. Technology Stack
+## 📚 Documentation & Concepts
 
-### Backend
-- Go (Golang)
-- wireguard-go
-- wgctrl-go
-- pion/stun
-- SQLite
-- Linux TUN interface
+We have built a comprehensive, interactive documentation section directly into the dashboard to teach you how it works.
 
-### Frontend
-- Next.js
-- Tailwind CSS
+<!-- ![Documentation Preview](docs/images/docs-preview.png) -->
+
+Visit the **[ShadowNet Documentation Hub](./docs/concepts/CONCEPTS_AND_FLOW.md)** covering:
+*   [Introduction to P2P Mesh VPNs](./docs/concepts/CONCEPTS_AND_FLOW.md#intro)
+*   [WireGuard Protocol Internals (Noise_IK)](./docs/concepts/WIRE_GUARD.md)
+*   [NAT Traversal & STUN](./docs/concepts/NAT_TRAVERSAL.md)
+*   [TUN/TAP Device Integration](./docs/concepts/TUN_TAP.md)
 
 ---
 
-## 2a. Project Status & Structure
+## 🛠️ Architecture
 
-This repository contains a complete architecture and internal packages for a peer-to-peer mesh VPN, plus a Next.js dashboard. CLI entrypoints in `cmd/` are currently scaffolds; wiring them to internal services is part of the implementation plan documented below.
+ShadowNet operates on a "Split-Brain" model:
 
-- Control plane service logic: `internal/controlplane` (API handlers, storage, services)
-- Node runtime logic: `internal/node` (STUN, NAT hole punching, WireGuard userspace, TUN)
-- Shared utilities and models: `internal/shared`, `internal/controlplane/model`, `shared/proto`
-- Dashboard (Next.js): `web/`
+```mermaid
+graph TD
+    subgraph Control Plane ["📡 Control Plane (Signal)"]
+        API[REST API]
+        DB[(Peer Store)]
+        API --> DB
+    end
 
-See `docs/` for detailed architecture, API specs, implementation plan, deployment, and troubleshooting.
+    subgraph Data Plane ["🕸️ Data Plane (Media)"]
+        NodeA[💻 Node A]
+        NodeB[💻 Node B]
+        NodeC[💻 Node C]
+    end
+
+    NodeA -- "1. Register (HTTP)" --> API
+    NodeB -- "1. Register (HTTP)" --> API
+    
+    NodeA -- "2. P2P Tunnel (UDP)" <--> NodeB
+    NodeB -- "2. P2P Tunnel (UDP)" <--> NodeC
+    NodeA -- "2. P2P Tunnel (UDP)" <--> NodeC
+
+    style Control Plane fill:#f9f,stroke:#333,stroke-width:2px
+    style Data Plane fill:#bbf,stroke:#333,stroke-width:2px
+```
+
+*   **Control Plane**: The "Phone Book". It helps peers find each other's current public IP:Port. It **never** sees or touches encrypted VPN traffic.
+*   **Data Plane**: The "Call". Peers establish direct UDP tunnels using WireGuard.
 
 ---
 
-## Table of Contents
+## 🏁 Quickstart
 
-- Quickstart
-- Technology Stack
-- Concepts & Flow
-- Architecture Overview
-- Control Plane API
-- Node Runtime Lifecycle
-- Implementation Plan (CLI + services)
-- Setup & Development
-- Deployment
-- Dashboard (Next.js)
-- Troubleshooting
-- Security Model
-- Roadmap
+### Prerequisites
+*   **Linux** (Kernel 5.4+)
+*   **Go** 1.21+
+*   **Node.js** 18+ (for dashboard)
 
----
-
-## Quickstart
-
-Until CLI entrypoints are wired, you can explore and run the dashboard:
+### 1. Run the Dashboard
+The easiest way to explore ShadowNet is via the web dashboard.
 
 ```bash
 cd web
-pnpm install    # or npm install / yarn
-pnpm dev        # starts Next.js dev server
+npm install
+npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) to see the mesh visualization and documentation.
 
-Configure the dashboard to point at your control plane URL via environment variable:
+### 2. Run the Control Plane (Server)
+*(CLI Integration in progress - see Implementation Plan)*
 
 ```bash
-export NEXT_PUBLIC_CONTROLPLANE_URL="http://localhost:8080"
+# Start the signaling server
+go run cmd/controlplane/main.go
 ```
 
-The full server and node runtime wiring steps are described in `docs/IMPLEMENTATION_PLAN.md`.
-For foundational understanding, see `docs/CONCEPTS_AND_FLOW.md`.
-
----
-
-## Control Plane Implementation
-
-Responsibilities and data model remain as described. API endpoints are documented in `docs/CONTROL_PLANE_API.md` with request/response payloads.
-
----
-
-## Node Runtime Lifecycle
-
-Detailed runtime flow, STUN discovery, UDP hole punching, WireGuard userspace setup, and TUN handling are covered in `docs/NODE_RUNTIME.md`.
-
----
-
-## Implementation Plan (CLI + services)
-
-Step-by-step tasks to wire `cmd/controlplane` and `cmd/node` to internal packages, define flags/config, initialize services, and start servers are provided in `docs/IMPLEMENTATION_PLAN.md`.
-
----
-
-## Setup & Development
-
-See `docs/SETUP.md` for prerequisites (Linux, Go, Node.js), development environment, and useful commands.
-
----
-
-## Deployment
-
-Refer to `docs/DEPLOYMENT.md` for Docker/Docker Compose examples, production notes, and operational runbook.
-
----
-
-## Dashboard (Next.js)
-
-The dashboard features and commands are covered in `docs/DASHBOARD.md`.
-
----
-
-## Troubleshooting
-
-Common issues (NAT types, firewall, TUN permissions, STUN reachability, WireGuard handshake) are documented in `docs/TROUBLESHOOTING.md`.
-
----
-
-## Security Model
-
-Summary remains as in section 11; in-depth notes and threat model are expanded in `docs/SECURITY.md`.
-
----
-
-## Roadmap
-
-Future improvements (relay fallback, IPv6, key rotation, ACLs, mobile) are restated in `docs/IMPLEMENTATION_PLAN.md` with suggested milestones.
-
-### Deployment
-- Docker
-- Docker Compose
-
----
-
-## 4. Control Plane Implementation
-
-### 4.1 Responsibilities
-
-The control plane:
-- Stores peer metadata
-- Distributes peer information
-- Tracks liveness via heartbeat
-- Exposes metrics for UI
-
-It does NOT:
-- Handle encryption
-- Relay traffic
-- Inspect packets
-
----
-
-### 4.2 Data Model
-
-```go
-type Peer struct {
-    ID            string
-    WGPublicKey   string
-    EndpointIP    string
-    EndpointPort  int
-    LastSeen      time.Time
-}
-```
-
----
-
-### 4.3 API Endpoints
-
-#### POST /register
-Registers a peer with its public key and discovered endpoint.
-
-Payload:
-```json
-{
-  "id": "peer-1",
-  "public_key": "base64key",
-  "endpoint_ip": "203.0.113.5",
-  "endpoint_port": 51820
-}
-```
-
----
-
-#### GET /peers
-Returns all active peers except the requester.
-
----
-
-#### POST /heartbeat
-Keeps peer marked as online.
-
----
-
-## 5. NAT Traversal
-
-### 5.1 STUN Discovery
-
-Each node uses STUN to discover its public-facing IP and UDP port.
-
-Key rules:
-- Use the same UDP socket for STUN and WireGuard
-- Do not rebind ports
-- Persist connections
-
----
-
-### 5.2 UDP Hole Punching
-
-Peers repeatedly send empty UDP packets to each other's public endpoints.
-This creates NAT mappings on both sides.
-
-Punch interval: 300–500ms
-
----
-
-## 6. WireGuard Userspace Integration
-
-### 6.1 Why Userspace WireGuard
-
-- No kernel module dependency
-- Easier debugging
-- Programmatic control
-- Portable deployment
-
----
-
-### 6.2 WireGuard Initialization Flow
-
-1. Create TUN device
-2. Start wireguard-go with TUN FD
-3. Configure interface using wgctrl-go
-4. Dynamically add peers and endpoints
-
----
-
-### 6.3 Key Management
-
-- Curve25519 keys
-- Generated per node
-- Public keys exchanged via control plane
-- Private keys never leave the node
-
----
-
-## 7. TUN Device Handling
-
-### 7.1 TUN Creation
-
+### 3. Run a Node (Client)
 ```bash
-ip tuntap add dev tun0 mode tun
-ip addr add 10.10.0.1/24 dev tun0
-ip link set tun0 up
-```
-
-The Go process reads raw IP packets from the TUN device.
-
----
-
-## 8. Packet Flow
-
-```
-Application
-   ↓
-TUN Interface
-   ↓
-WireGuard Encryption
-   ↓
-UDP Socket
-   ↓
-Internet
-   ↓
-UDP Socket
-   ↓
-WireGuard Decryption
-   ↓
-TUN Interface
-   ↓
-Application
+# Join the mesh
+sudo go run cmd/node/main.go --control-plane=http://localhost:8080
 ```
 
 ---
 
-## 9. Node Runtime Lifecycle
+## 🧩 Technology Stack
 
-1. Load configuration
-2. Generate or load WireGuard keys
-3. Discover public endpoint via STUN
-4. Register with control plane
-5. Fetch peers
-6. Perform NAT hole punching
-7. Establish WireGuard tunnels
-8. Start packet forwarding
-9. Send heartbeats
+| Component | Technology | Role |
+|-----------|------------|------|
+| **Core Networking** | `wireguard-go` | Userspace implementation of the WireGuard protocol |
+| **NAT Traversal** | `pion/stun` | STUN client for public endpoint discovery |
+| **Interface** | `water` (TUN/TAP) | OS-level virtual network interface creation |
+| **Control Plane** | `Go` + `SQLite` | Signaling server and peer state management |
+| **Dashboard** | `Next.js` + `Tailwind` | Real-time visualization and management UI |
 
 ---
 
-## 10. Dashboard Implementation
+## 👥 Contributing
 
-### Features
-- Online peers
-- Handshake timestamps
-- Bytes sent/received
-- Endpoint details
-- Connection state
+ShadowNet is an open-source project designed for learning. We welcome contributions!
 
-The UI polls the control plane periodically.
-
----
-
-## 11. Security Model
-
-- End-to-end encryption using WireGuard
-- Control plane has zero visibility into traffic
-- Replay protection via WireGuard protocol
-- No plaintext metadata leakage beyond endpoints
+1.  Fork the repository
+2.  Create your feature branch (`git checkout -b feature/amazing-feature`)
+3.  Commit your changes (`git commit -m 'Add amazing feature'`)
+4.  Push to the branch (`git push origin feature/amazing-feature`)
+5.  Open a Pull Request
 
 ---
 
-## 12. Limitations
+## 📄 License
 
-- Symmetric NATs may fail without relays
-- No automatic key rotation (future work)
-- No relay fallback (DERP-like)
+Distributed under the MIT License. See `LICENSE` for more information.
 
----
-
-## 13. Future Improvements
-
-- Relay server fallback
-- IPv6 support
-- Key rotation
-- ACLs and policy engine
-- Mobile support
-
----
-
-## 14. Conclusion
-
-ShadowNet demonstrates a real-world implementation of a **secure, NAT-traversed, peer-to-peer mesh VPN** using modern networking primitives.  
-It mirrors the architecture of industry-grade systems while remaining fully open and inspectable.
-
----
+*(WireGuard is a registered trademark of Jason A. Donenfeld.)*

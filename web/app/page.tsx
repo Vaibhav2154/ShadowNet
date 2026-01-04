@@ -19,7 +19,8 @@ import {
   Home,
   Settings,
   BarChart3,
-  Shield
+  Shield,
+  BookOpen
 } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 
@@ -88,58 +89,34 @@ export default function Dashboard() {
   const activePeers = peers.filter(p => isPeerActive(p.last_seen))
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-neutral-800/10 flex flex-col bg-[#0a0a0a]">
-        <div className="p-6 border-b border-neutral-800/10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-              <Network className="w-5 h-5 text-black" />
-            </div>
-            <span className="text-xl font-semibold text-white">ShadowNet</span>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1">
-          <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-neutral-900 text-white">
-            <Home className="w-4 h-4" />
-            <span className="text-sm">Dashboard</span>
-          </a>
-          <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-white transition-colors">
-            <Network className="w-4 h-4" />
-            <span className="text-sm">Peers</span>
-          </a>
-          <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-white transition-colors">
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm">Analytics</span>
-          </a>
-          <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-white transition-colors">
-            <Shield className="w-4 h-4" />
-            <span className="text-sm">Security</span>
-          </a>
-        </nav>
-
-        <div className="p-4 border-t border-neutral-800/10">
-          <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-white transition-colors">
-            <Settings className="w-4 h-4" />
-            <span className="text-sm">Settings</span>
-          </a>
-        </div>
-      </div>
+    <div className="flex min-h-screen bg-black">
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {/* Top Bar */}
-        <div className="bg-[#0a0a0a] sticky top-0 z-10">
+
+        <div className="  sticky top-0 z-10">
           <div className="px-8 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-              <p className="text-sm text-neutral-500 mt-1">Monitor your P2P mesh VPN network</p>
+            <div className="p-6 border-b border-neutral-800/10">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                  <Network className="w-5 h-5 text-black" />
+                </div>
+                <span className="text-xl font-semibold text-white">ShadowNet</span>
+              </div>
             </div>
-            <Button onClick={fetchData} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <a href="/docs">
+                <Button variant="outline" size="sm">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Documentation
+                </Button>
+              </a>
+              <Button onClick={fetchData} variant="outline" size="sm">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
 
